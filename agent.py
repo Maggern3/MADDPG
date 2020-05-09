@@ -17,7 +17,7 @@ class Agent():
             self.device = torch.device("cuda")
         else:
             print('training on cpu...')
-            self.device = torch.device("cpu")
+        self.device = torch.device("cpu")
 
         self.actor = Actor(actor_size, action_size).to(self.device)
         self.actor_target = Actor(actor_size, action_size).to(self.device)
@@ -52,7 +52,7 @@ class Agent():
 class OUNoise:
     """Ornstein-Uhlenbeck process."""
 
-    def __init__(self, size, seed, mu=0., theta=0.15, sigma=0.05):#0.1
+    def __init__(self, size, seed, mu=0., theta=0.15, sigma=0.05):#0.1 0.05
         """Initialize parameters and noise process."""
         self.mu = mu * np.ones(size)
         self.theta = theta

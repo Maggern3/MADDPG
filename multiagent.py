@@ -25,14 +25,10 @@ class MultiAgent():
         for agnt in range(self.agents):
             agent = self.networks[agnt]
             states = states_all_agents[:,agnt]
-            #agent.actor.eval()
-            #with torch.no_grad():
-            actions_agent = agent.actor(states)#.cpu().data.numpy()
+            actions_agent = agent.actor(states)
             if(agnt != agnt_num):
                 actions_agent = actions_agent.detach()
-            #agent.actor.train()
             actions.append(actions_agent)
-            #return np.clip(actions, -1, 1)
         return actions
 
     def act_target(self, states_all_agents):
@@ -46,7 +42,6 @@ class MultiAgent():
                 actions_agent = agent.actor_target(states).cpu().data.numpy()
             agent.actor.train()
             actions.append(actions_agent)
-            #return np.clip(actions, -1, 1)
         return torch.tensor(actions)
 
     def add(self, sars):
@@ -56,29 +51,21 @@ class MultiAgent():
         agent = self.networks[agnt]
         if(len(self.replay_buffer) > self.batch_size): 
             states, actions, rewards, next_states, dones = self.sample(agnt)     
-            #print(next_states.shape)       
             next_actions = self.act_target(next_states)
-            #print(next_actions.shape)
             next_actions = torch.cat((next_actions[0], next_actions[1]), dim=1)
-            #next_actions = torch.cat((next_actions), dim=0)
-            #print(next_actions.shape)
             with torch.no_grad():
                 next_state_q_v = agent.critic_target(torch.cat((next_states[:,agnt], next_actions), dim=1)) # torch.Size([128, 1])
-            #print(next_state_q_v.shape)
-            #print(rewards.shape, dones.shape) # torch.Size([128, 1]) torch.Size([128, 1])
             q_targets = rewards + (agent.gamma * next_state_q_v * (1-dones))
             actions = torch.cat((actions[:,0], actions[:,1]), dim=1)
-            #print(actions.shape)
             current_q_v = agent.critic(torch.cat((states[:,agnt], actions), dim=1))
 
             criterion = torch.nn.SmoothL1Loss()
             critic_loss = criterion(current_q_v, q_targets.detach()) # SmoothL1Loss, q_targets.detach()
             agent.critic_optim.zero_grad()
             critic_loss.backward()
-            #torch.nn.utils.clip_grad_norm(agent.critic.parameters(), 1)
+            #torch.nn.utils.clip_grad_norm(agent.critic.parameters(), 1) #0.5
             agent.critic_optim.step()
 
-            # could be missing derivates
             predicted_actions = self.act_train(states, agnt)
             predicted_actions = torch.cat((predicted_actions[0], predicted_actions[1]), dim=1)
             actor_loss = -agent.critic(torch.cat((states[:,agnt], predicted_actions), dim=1)).mean()
